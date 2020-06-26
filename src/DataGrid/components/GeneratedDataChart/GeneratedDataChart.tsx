@@ -24,8 +24,8 @@ import { parse, addMonths, format } from "date-fns";
 import { Typography } from "antd";
 
 export const FORECAST_CONFIG = {
-  periodSize: 12,
-  observationsToForeast: 8,
+  periodSize: 3,
+  observationsToForeast: 3,
 };
 
 const GeneratedDataChart = () => {

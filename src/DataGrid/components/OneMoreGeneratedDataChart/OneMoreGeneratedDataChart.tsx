@@ -6,7 +6,7 @@ import {
   getPredictions,
   maxValidDataSize,
 } from "../../../utils/dataManagers/forecastManager";
-import { FORECAST_CONFIG, generatedRandom } from "../../DataGrid";
+import { generatedRandom } from "../../DataGrid";
 import { parse, addMonths, format } from "date-fns";
 import {
   ResponsiveContainer,
@@ -20,6 +20,11 @@ import {
   Brush,
 } from "recharts";
 import { Typography } from "antd";
+
+export const FORECAST_CONFIG = {
+  periodSize: 6,
+  observationsToForeast: 6,
+};
 
 const fitGeneratedData = (inputData) => {
   const dataPreparedToPredict: number[] = inputData.map((i) => i.value);
