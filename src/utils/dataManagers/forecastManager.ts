@@ -19,12 +19,28 @@ export const maxValidDataSize = (
   return dataSize - mod;
 };
 
+interface ForecastConfig {
+  periodSize: number;
+  observationsToForeast: number;
+}
+/**
+ * Predict data for numbered array based on Holt-Winters algorithm.
+ * Number of periods to forecast should be less or equal to size of period;
+ *
+ *
+ * @param {number[]} inputData - input array to predict on.
+ * Should contain data for at least TWO complete periods.
+ *
+ * @param {ForecastConfig} FORECAST_CONFIG - configure number of observations per season(period)
+ * & number of observations to forecast
+ *
+ * @returns {number[]} an array with valid length + N more items.
+ *  - All of them are predicted.
+ *  - Data can differ from orginal one.
+ */
 export const getPredictions = (
   inputData: number[],
-  FORECAST_CONFIG: {
-    periodSize: number;
-    observationsToForeast: number;
-  }
+  FORECAST_CONFIG: ForecastConfig
 ): number[] => {
   // # of observations per season
   const period = FORECAST_CONFIG.periodSize;
