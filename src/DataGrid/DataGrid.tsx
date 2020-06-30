@@ -1,26 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import styles from "./DataGrid.module.scss";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Brush,
-} from "recharts";
-import { mockData1, growingGeneral } from "../utils/dataSource/dummy";
 import { random } from "lodash";
-import { last, getPredictions } from "../utils/dataManagers/forecastManager";
-import { parse, toDate, addMonths } from "date-fns";
+import { addMonths } from "date-fns";
 import { format } from "date-fns/esm";
-import { Card, Typography } from "antd";
+import { Typography } from "antd";
 import MockDataChart from "./components/MockDataChart";
 import GrowingGeneralChart from "./components/GrowingGeneralChart";
 import GeneratedDataChart from "./components/GeneratedDataChart";
 import OneMoreGeneratedDataChart from "./components/OneMoreGeneratedDataChart";
+import DataMiss from "./components/DataMiss";
 
 export const FORECAST_CONFIG = {
   periodSize: 12,
@@ -44,11 +32,13 @@ const DataGrid = () => {
       <div className={styles.DataGridContainer}>
         <MockDataChart />
 
-        <GrowingGeneralChart />
+        {/* <GrowingGeneralChart /> */}
 
-        <GeneratedDataChart />
+        <DataMiss />
 
-        <OneMoreGeneratedDataChart />
+        {/* <GeneratedDataChart /> */}
+
+        {/* <OneMoreGeneratedDataChart /> */}
       </div>
     </div>
   );

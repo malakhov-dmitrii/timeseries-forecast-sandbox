@@ -12,6 +12,11 @@ import {
   Legend,
   ResponsiveContainer,
   Brush,
+  AreaChart,
+  Area,
+  CartesianAxis,
+  ReferenceLine,
+  Label,
 } from "recharts";
 import { mockData1 } from "../../../utils/dataSource/dummy";
 import {
@@ -27,6 +32,47 @@ const FORECAST_CONFIG = {
   observationsToForeast: 4,
 };
 
+const CustomizedAxisTick = (props) => {
+  const { x, y, stroke, payload, data } = props;
+  // console.log(props);
+  const content = data.find((i) => i.Period === payload.value)?.Sales;
+  const contentPredicted = data.find((i) => i.Period === payload.value)
+    ?.predicted;
+
+  console.log(contentPredicted);
+
+  return (
+    <>
+      <g transform={`translate(${x}, ${0})`} z={9999}>
+        <text
+          x={10}
+          y={0}
+          dy={16}
+          fontSize={12}
+          textAnchor="end"
+          fill="#fff"
+          transform="rotate(-35)"
+        >
+          {content ? `${content}k` : `${contentPredicted.toFixed(2)}k`}
+        </text>
+      </g>
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0}
+          y={0}
+          dy={16}
+          fontSize={12}
+          textAnchor="end"
+          fill="#fff"
+          transform="rotate(-35)"
+        >
+          {payload.value}
+        </text>
+      </g>
+    </>
+  );
+};
+
 const MockDataChart = () => {
   const [mockData, setMockData] = useState(null);
 
@@ -37,12 +83,17 @@ const MockDataChart = () => {
       getPredictions(dataPreparedToPredict, FORECAST_CONFIG),
       FORECAST_CONFIG.observationsToForeast + 1
     );
-    const newChartData = mockData1;
+    let newChartData = mockData1;
 
     // Make point with last available historical data and first predicted one
+    // newChartData = newChartData.map
     newChartData[newChartData.length - 1] = {
       ...newChartData[newChartData.length - 1],
-      predicted: predictedRow[0],
+      predicted: newChartData[newChartData.length - 1].Sales,
+      precisionArea: [
+        newChartData[newChartData.length - 1].Sales,
+        newChartData[newChartData.length - 1].Sales,
+      ],
     };
 
     const lastDate = last(newChartData)[0]?.Period;
@@ -50,11 +101,25 @@ const MockDataChart = () => {
     const lastDateParsed = parse(lastDate, "yyyy-MMM", new Date());
     console.log(lastDateParsed, addMonths(lastDateParsed, 1));
 
+    // // See how predictions correlate with historical data
+    // newChartData = newChartData.map((i, index) => {
+    //   return {
+    //     ...i,
+    //     predicted: getPredictions(dataPreparedToPredict, FORECAST_CONFIG)[
+    //       index + 1
+    //     ],
+    //   };
+    // });
+
     for (let i = 0; i < FORECAST_CONFIG.observationsToForeast; i++) {
       newChartData.push({
         Period: format(addMonths(lastDateParsed, i + 1), "yyyy-MMM"),
         Sales: null,
-        predicted: predictedRow[i + 1],
+        precisionArea: [
+          Number((predictedRow[i + 1] * (1 + (i + 1) / 9)).toFixed(2)),
+          Number((predictedRow[i + 1] * (1 - (i + 1) / 9)).toFixed(2)),
+        ],
+        predicted: Number(predictedRow[i + 1].toFixed(2)),
       });
     }
     return newChartData;
@@ -65,7 +130,7 @@ const MockDataChart = () => {
   }, []);
 
   const title = (
-    <>
+    <div style={{ color: "white", marginBottom: "30px" }}>
       <Typography.Title level={3}>Line chart example</Typography.Title>
       <Typography.Text>
         (Period size: {FORECAST_CONFIG.periodSize}; Observations to forecast:{" "}
@@ -80,7 +145,7 @@ const MockDataChart = () => {
         </b>
         records
       </Typography.Text>
-    </>
+    </div>
   );
 
   return (
@@ -88,15 +153,16 @@ const MockDataChart = () => {
       style={{
         width: "50%",
         height: "100%",
-        paddingBottom: "110px",
+        paddingBottom: "150px",
         margin: "auto",
-        minWidth: "400px",
+        minWidth: "100%",
+        background: "black",
       }}
     >
       {title}
 
       <ResponsiveContainer width="100%">
-        <LineChart
+        <AreaChart
           width={600}
           height={300}
           data={mockData}
@@ -104,41 +170,64 @@ const MockDataChart = () => {
             top: 5,
             right: 30,
             left: 20,
-            bottom: 5,
+            // bottom: 5,
           }}
         >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="Period" />
-          <YAxis
-            type="number"
-            domain={[
-              (dataMin) => {
-                let dm = dataMin;
-                return Number((dm /= 1.2).toFixed(2));
-              },
-              (dataMax) => {
-                let dm = dataMax;
-                return Number((dm *= 1.2).toFixed(2));
-              },
-            ]}
+          <CartesianGrid
+            horizontal={false}
+            strokeDasharray="3 5"
+            strokeWidth={2}
           />
+          <XAxis
+            height={60}
+            dataKey="Period"
+            interval={0}
+            tick={<CustomizedAxisTick data={mockData} />}
+          />
+          <YAxis type="number" hide domain={["dataMin", "dataMax"]} />
           <Tooltip />
-          <Legend />
-          <Line
-            type="monotone"
-            dataKey="Sales"
-            stroke="#264653"
-            activeDot={{ r: 3 }}
-          />
-          <Line
+          <Area
             type="monotone"
             dataKey="predicted"
+            stroke="#f18153"
+            fill="#f18153"
+            activeDot={{ r: 3 }}
+          />
+          <Area
+            type="monotone"
+            dataKey="precisionArea"
             stroke="#2a9d8f"
             activeDot={{ r: 3 }}
           />
+          <Area
+            type="linear"
+            dataKey="Sales"
+            stroke="#fff"
+            fill="#f18153"
+            dot={{ stroke: "white", strokeWidth: 2, r: 4, fill: "black" }}
+            strokeWidth={3}
+            fillOpacity={1}
+            activeDot={{ r: 3 }}
+          />
 
-          <Brush />
-        </LineChart>
+          <ReferenceLine
+            x={mockData?.find((i) => i.predicted && i.Sales)?.Period}
+            stroke="red"
+            strokeWidth={2}
+            // strokeDasharray="15 5"
+            label={
+              <Label
+                value="Forecast start"
+                fontWeight={600}
+                fontSize={18}
+                position="centerTop"
+                fill="#fff"
+              />
+            }
+          />
+
+          <Brush height={20} startIndex={mockData?.length - 16} />
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );

@@ -2,6 +2,7 @@ export interface MockData {
   Period: string;
   Sales: number;
   predicted?: number;
+  precisionArea?: any[];
 }
 
 export const mockData1: MockData[] = [
