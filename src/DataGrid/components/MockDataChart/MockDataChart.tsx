@@ -51,7 +51,7 @@ const CustomizedAxisTick = (props) => {
           fontSize={12}
           textAnchor="end"
           fill="#fff"
-          transform="rotate(-35)"
+          transform="rotate(0)"
         >
           {content ? `${content}k` : `${contentPredicted.toFixed(2)}k`}
         </text>
@@ -126,7 +126,9 @@ const MockDataChart = () => {
   };
 
   useEffect(() => {
-    setMockData(fitMockData());
+    const mockData = fitMockData();
+    console.log(mockData)
+    setMockData(mockData);
   }, []);
 
   const title = (
@@ -156,7 +158,15 @@ const MockDataChart = () => {
         paddingBottom: "150px",
         margin: "auto",
         minWidth: "100%",
-        background: "black",
+        background: "linear-gradient(to left, rgb(101,120,124) 0%, rgb(50, 60, 62) 100%)",
+        backgroundImage: "linear-gradient(to left, rgb(101, 120, 124) 0%, rgb(50, 60, 62) 100%)",
+        backgroundPositionX: "initial",
+        backgroundPositionY: "initial",    
+        backgroundSize: "initial",   
+        backgroundAttachment: "initial",   
+        backgroundOrigin: "initial",    
+        backgroundClip: "initial",   
+        backgroundColor: "initial"
       }}
     >
       {title}
@@ -167,9 +177,9 @@ const MockDataChart = () => {
           height={300}
           data={mockData}
           margin={{
-            top: 5,
+            top: 25,
             right: 30,
-            left: 20,
+            left: 50,
             // bottom: 5,
           }}
         >
@@ -177,6 +187,8 @@ const MockDataChart = () => {
             horizontal={false}
             strokeDasharray="3 5"
             strokeWidth={2}
+            x={mockData?.find((i) => i.predicted && i.Sales)?.Period}
+          
           />
           <XAxis
             height={60}
@@ -212,9 +224,9 @@ const MockDataChart = () => {
 
           <ReferenceLine
             x={mockData?.find((i) => i.predicted && i.Sales)?.Period}
-            stroke="red"
+            stroke="black"
             strokeWidth={2}
-            // strokeDasharray="15 5"
+            strokeDasharray="15 5"
             label={
               <Label
                 value="Forecast start"
