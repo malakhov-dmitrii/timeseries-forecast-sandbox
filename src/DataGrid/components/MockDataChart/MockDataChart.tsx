@@ -1,20 +1,17 @@
+// @ts-nocheck
+
 import React, { useState, useEffect } from "react";
 import styles from "./MockDataChart.module.scss";
-import cn from "classnames";
 
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   Brush,
   AreaChart,
   Area,
-  CartesianAxis,
   ReferenceLine,
   Label,
 } from "recharts";
@@ -32,14 +29,48 @@ const FORECAST_CONFIG = {
   observationsToForeast: 4,
 };
 
+const CustomTooltip = (props) => {
+  const { active, payload, label, data } = props;
+  console.log(props);
+  const dataItem = data.find((i) => i.Period === label);
+
+  const precisionLabel = () => {
+    if (dataItem.precisionArea[0] === dataItem.precisionArea[1]) return null;
+    else return dataItem.precisionArea.join(" ~ ");
+  };
+
+  if (active) {
+    return (
+      <div className={styles.TooltipContainer}>
+        <p className={styles.TooltipLabel}>{label}</p>
+        {dataItem.Sales && (
+          <p className={styles.TooltipValue}>
+            <b>Sales</b>: {dataItem.Sales}
+          </p>
+        )}
+        {!dataItem.Sales && dataItem.predicted && (
+          <p className={styles.TooltipValue}>
+            <b>Predicted values:</b> {dataItem.predicted}
+          </p>
+        )}
+        {precisionLabel() && (
+          <p className={styles.TooltipValue}>
+            <b>Precision Area:</b> {precisionLabel()}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+};
+
 const CustomizedAxisTick = (props) => {
   const { x, y, stroke, payload, data } = props;
   // console.log(props);
   const content = data.find((i) => i.Period === payload.value)?.Sales;
   const contentPredicted = data.find((i) => i.Period === payload.value)
     ?.predicted;
-
-  console.log(contentPredicted);
 
   return (
     <>
@@ -83,7 +114,13 @@ const MockDataChart = () => {
       getPredictions(dataPreparedToPredict, FORECAST_CONFIG),
       FORECAST_CONFIG.observationsToForeast + 1
     );
-    let newChartData = mockData1;
+
+    // We need this to avoid 0-values on chart with areas
+    let newChartData = mockData1.map((i) => ({
+      ...i,
+      precisionArea: [null, null],
+      predicted: null,
+    }));
 
     // Make point with last available historical data and first predicted one
     // newChartData = newChartData.map
@@ -127,7 +164,7 @@ const MockDataChart = () => {
 
   useEffect(() => {
     const mockData = fitMockData();
-    console.log(mockData)
+    console.log(mockData);
     setMockData(mockData);
   }, []);
 
@@ -150,6 +187,10 @@ const MockDataChart = () => {
     </div>
   );
 
+  console.log(mockData);
+  const refLinePeriodName = mockData?.find((i) => i.predicted && i.Sales)
+    ?.Period;
+
   return (
     <div
       style={{
@@ -158,15 +199,17 @@ const MockDataChart = () => {
         paddingBottom: "150px",
         margin: "auto",
         minWidth: "100%",
-        background: "linear-gradient(to left, rgb(101,120,124) 0%, rgb(50, 60, 62) 100%)",
-        backgroundImage: "linear-gradient(to left, rgb(101, 120, 124) 0%, rgb(50, 60, 62) 100%)",
+        background:
+          "linear-gradient(to left, rgb(101,120,124) 0%, rgb(50, 60, 62) 100%)",
+        backgroundImage:
+          "linear-gradient(to left, rgb(101, 120, 124) 0%, rgb(50, 60, 62) 100%)",
         backgroundPositionX: "initial",
-        backgroundPositionY: "initial",    
-        backgroundSize: "initial",   
-        backgroundAttachment: "initial",   
-        backgroundOrigin: "initial",    
-        backgroundClip: "initial",   
-        backgroundColor: "initial"
+        backgroundPositionY: "initial",
+        backgroundSize: "initial",
+        backgroundAttachment: "initial",
+        backgroundOrigin: "initial",
+        backgroundClip: "initial",
+        backgroundColor: "initial",
       }}
     >
       {title}
@@ -187,8 +230,19 @@ const MockDataChart = () => {
             horizontal={false}
             strokeDasharray="3 5"
             strokeWidth={2}
+            // Custom grid calculations
+            verticalCoordinatesGenerator={(e) => {
+              const itemWidth = e.xAxis.width / (e.xAxis.domain.length - 1);
+
+              return e.xAxis.domain.map((i, idx) => {
+                // Skip if reference line on this position
+                if (refLinePeriodName === i) {
+                  return 0;
+                }
+                return e.offset.left + itemWidth * idx;
+              });
+            }}
             x={mockData?.find((i) => i.predicted && i.Sales)?.Period}
-          
           />
           <XAxis
             height={60}
@@ -197,7 +251,7 @@ const MockDataChart = () => {
             tick={<CustomizedAxisTick data={mockData} />}
           />
           <YAxis type="number" hide domain={["dataMin", "dataMax"]} />
-          <Tooltip />
+          <Tooltip content={<CustomTooltip data={mockData} />} />
           <Area
             type="monotone"
             dataKey="predicted"
@@ -223,7 +277,7 @@ const MockDataChart = () => {
           />
 
           <ReferenceLine
-            x={mockData?.find((i) => i.predicted && i.Sales)?.Period}
+            x={refLinePeriodName}
             stroke="black"
             strokeWidth={2}
             strokeDasharray="15 5"
