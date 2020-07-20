@@ -83,6 +83,18 @@ const adjustParams = (
         // Period size
         const pSize = data.length / p;
 
+        console.log({
+          data,
+          p,
+          obs,
+          pSize,
+          bestError,
+          bestAlpha,
+          bestBeta,
+          bestGamma,
+          bestPeriodSize,
+          bestObs,
+        });
         if (pSize >= 2) {
           // Adjust Alpha
           for (let a = 0; a < 1; a = safeSum(a, adjustmentStep)) {
@@ -90,24 +102,26 @@ const adjustParams = (
             for (let b = 0; b < 1; b = safeSum(b, adjustmentStep)) {
               // Adjust Gamma
               for (let g = 0; g < 1; g = safeSum(g, adjustmentStep)) {
-                // Get predictions based on current coefficents
-                const predictions = forecast(data, a, b, g, p, obs);
-                //   Prepare to calc squared mean error
-                const errorDataCalc = data.map((i, index: number) => ({
-                  actual: i,
-                  predicted: predictions[index],
-                }));
-                //   Lower rate - better;
-                const errorRate = RMSE.rmse(errorDataCalc);
-                // Update best marks
-                if (errorRate < bestError) {
-                  bestError = errorRate;
-                  bestAlpha = a;
-                  bestBeta = b;
-                  bestGamma = g;
-                  bestObs = obs;
-                  bestPeriodSize = p;
-                }
+                try {
+                  // Get predictions based on current coefficents
+                  const predictions = forecast(data, a, b, g, p, obs);
+                  //   Prepare to calc squared mean error
+                  const errorDataCalc = data.map((i, index: number) => ({
+                    actual: i,
+                    predicted: predictions[index],
+                  }));
+                  //   Lower rate - better;
+                  const errorRate = RMSE.rmse(errorDataCalc);
+                  // Update best marks
+                  if (errorRate < bestError) {
+                    bestError = errorRate;
+                    bestAlpha = a;
+                    bestBeta = b;
+                    bestGamma = g;
+                    bestObs = obs;
+                    bestPeriodSize = p;
+                  }
+                } catch (error) {}
               }
             }
           }

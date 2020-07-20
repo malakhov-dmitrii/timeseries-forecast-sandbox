@@ -30,7 +30,7 @@ const DataGrid = () => {
     <div>
       <Typography.Title>Realtime timeseries forecast</Typography.Title>
       <div className={styles.DataGridContainer}>
-        <MockDataChart />
+        {/* <MockDataChart /> */}
 
         {/* <GrowingGeneralChart /> */}
 

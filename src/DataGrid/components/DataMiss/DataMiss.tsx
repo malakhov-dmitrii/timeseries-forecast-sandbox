@@ -81,7 +81,7 @@ const DataMiss = () => {
   };
 
   useEffect(() => {
-    setData(fitGeneratedData(generatedRandom(6, 100, 150)));
+    setData(fitGeneratedData(generatedRandom(39, 100, 150)));
   }, []);
 
   const title = (
