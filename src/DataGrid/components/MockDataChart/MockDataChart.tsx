@@ -1,7 +1,8 @@
 // @ts-nocheck
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useReducer } from "react";
 import styles from "./MockDataChart.module.scss";
+import useInterval from "@use-it/interval";
 
 import {
   XAxis,
@@ -22,7 +23,40 @@ import {
   maxValidDataSize,
 } from "../../../utils/dataManagers/forecastManager";
 import { parse, addMonths, format } from "date-fns";
-import { Typography } from "antd";
+import { Typography, Button } from "antd";
+
+const initialState = {
+  start: 0,
+  end: 2,
+  isPlaying: false,
+};
+
+const reducer = (state: typeof initialState, action) => {
+  switch (action.type) {
+    case "play":
+      return {
+        ...state,
+        end: 3,
+        start: 0,
+        isPlaying: true,
+      };
+    case "stop":
+      return {
+        ...state,
+        end: 3,
+        start: 0,
+        isPlaying: false,
+      };
+    case "increase":
+      return {
+        ...state,
+        start: state.end - state.start > 15 ? state.start + 1 : state.start,
+        end: state.end + 1,
+      };
+    default:
+      return state;
+  }
+};
 
 const FORECAST_CONFIG = {
   periodSize: 5,
@@ -30,27 +64,26 @@ const FORECAST_CONFIG = {
 };
 
 const CustomTooltip = (props) => {
-  const { active, payload, label, data } = props;
-  console.log(props);
+  const { active, label, data } = props;
   const dataItem = data.find((i) => i.Period === label);
 
   const precisionLabel = () => {
-    if (dataItem.precisionArea[0] === dataItem.precisionArea[1]) return null;
-    else return dataItem.precisionArea.join(" ~ ");
+    if (dataItem?.precisionArea[0] === dataItem?.precisionArea[1]) return null;
+    else return dataItem?.precisionArea.join(" ~ ");
   };
 
   if (active) {
     return (
       <div className={styles.TooltipContainer}>
         <p className={styles.TooltipLabel}>{label}</p>
-        {dataItem.Sales && (
+        {dataItem?.Sales && (
           <p className={styles.TooltipValue}>
-            <b>Sales</b>: {dataItem.Sales}
+            <b>Sales</b>: {dataItem?.Sales}
           </p>
         )}
-        {!dataItem.Sales && dataItem.predicted && (
+        {!dataItem?.Sales && dataItem?.predicted && (
           <p className={styles.TooltipValue}>
-            <b>Predicted values:</b> {dataItem.predicted}
+            <b>Predicted values:</b> {dataItem?.predicted}
           </p>
         )}
         {precisionLabel() && (
@@ -106,6 +139,9 @@ const CustomizedAxisTick = (props) => {
 
 const MockDataChart = () => {
   const [mockData, setMockData] = useState(null);
+  const [displayData, setDisplayData] = useState(null);
+  const [state, dispatch] = useReducer(reducer, initialState);
+  console.log(state);
 
   const fitMockData = () => {
     const dataPreparedToPredict: number[] = mockData1.map((i) => i.Sales);
@@ -122,21 +158,49 @@ const MockDataChart = () => {
       predicted: null,
     }));
 
-    // Make point with last available historical data and first predicted one
-    // newChartData = newChartData.map
-    newChartData[newChartData.length - 1] = {
-      ...newChartData[newChartData.length - 1],
-      predicted: newChartData[newChartData.length - 1].Sales,
+    // Make point with pre-last available historical data and 0 predicted one
+    newChartData[newChartData.length - 2] = {
+      ...newChartData[newChartData.length - 2],
+      predicted: newChartData[newChartData.length - 2].Sales,
       precisionArea: [
-        newChartData[newChartData.length - 1].Sales,
-        newChartData[newChartData.length - 1].Sales,
+        newChartData[newChartData.length - 2].Sales,
+        newChartData[newChartData.length - 2].Sales,
       ],
     };
 
-    const lastDate = last(newChartData)[0]?.Period;
+    const lastDate = last(newChartData, 2)[0]?.Period;
+    console.log(last(newChartData, 2));
 
     const lastDateParsed = parse(lastDate, "yyyy-MMM", new Date());
     console.log(lastDateParsed, addMonths(lastDateParsed, 1));
+
+    // Here we need to pick last period as it is not ended yet
+    const currentPeriodIndex = -1;
+    newChartData[newChartData.length - 1] = {
+      Period: format(
+        addMonths(
+          parse(last(newChartData)[0]?.Period, "yyyy-MMM", new Date()),
+          0
+        ),
+        "yyyy-MMM"
+      ),
+      Sales: newChartData[newChartData.length - 1].Sales,
+      precisionArea: [
+        Number(
+          (
+            predictedRow[currentPeriodIndex + 1] *
+            (1 + (currentPeriodIndex + 1) / 9)
+          ).toFixed(2)
+        ),
+        Number(
+          (
+            predictedRow[currentPeriodIndex + 1] *
+            (1 - (currentPeriodIndex + 1) / 9)
+          ).toFixed(2)
+        ),
+      ],
+      predicted: Number(predictedRow[currentPeriodIndex + 1].toFixed(2)),
+    };
 
     // // See how predictions correlate with historical data
     // newChartData = newChartData.map((i, index) => {
@@ -150,7 +214,7 @@ const MockDataChart = () => {
 
     for (let i = 0; i < FORECAST_CONFIG.observationsToForeast; i++) {
       newChartData.push({
-        Period: format(addMonths(lastDateParsed, i + 1), "yyyy-MMM"),
+        Period: format(addMonths(lastDateParsed, i + 2), "yyyy-MMM"),
         Sales: null,
         precisionArea: [
           Number((predictedRow[i + 1] * (1 + (i + 1) / 9)).toFixed(2)),
@@ -162,10 +226,26 @@ const MockDataChart = () => {
     return newChartData;
   };
 
+  useInterval(() => {
+    if (state.isPlaying) {
+      const buffer = displayData;
+      const bufferOffset = state.end;
+      const current = buffer.slice(state.start, bufferOffset);
+
+      if (state.end === buffer.length) {
+        dispatch({ type: "stop" });
+      } else {
+        setMockData(current);
+        // console.log(state.end);
+        dispatch({ type: "increase" });
+      }
+    }
+  }, 1000);
+
   useEffect(() => {
     const mockData = fitMockData();
-    console.log(mockData);
     setMockData(mockData);
+    setDisplayData(mockData);
   }, []);
 
   const title = (
@@ -187,7 +267,6 @@ const MockDataChart = () => {
     </div>
   );
 
-  console.log(mockData);
   const refLinePeriodName = mockData?.find((i) => i.predicted && i.Sales)
     ?.Period;
 
@@ -253,6 +332,7 @@ const MockDataChart = () => {
           <YAxis type="number" hide domain={["dataMin", "dataMax"]} />
           <Tooltip content={<CustomTooltip data={mockData} />} />
           <Area
+            isAnimationActive={false}
             type="monotone"
             dataKey="predicted"
             stroke="#f18153"
@@ -260,12 +340,14 @@ const MockDataChart = () => {
             activeDot={{ r: 3 }}
           />
           <Area
+            isAnimationActive={false}
             type="monotone"
             dataKey="precisionArea"
             stroke="#2a9d8f"
             activeDot={{ r: 3 }}
           />
           <Area
+            isAnimationActive={false}
             type="linear"
             dataKey="Sales"
             stroke="#fff"
@@ -291,10 +373,22 @@ const MockDataChart = () => {
               />
             }
           />
-
-          <Brush height={20} startIndex={mockData?.length - 16} />
+          {!state.isPlaying && (
+            <Brush height={20} startIndex={mockData?.length - 16} />
+          )}
         </AreaChart>
       </ResponsiveContainer>
+
+      <Button
+        type="default"
+        color="primary"
+        onClick={() => {
+          dispatch({ type: state.isPlaying ? "stop" : "play" });
+          state.isPlaying && setMockData(displayData);
+        }}
+      >
+        {state.isPlaying ? "Stop" : "Play"}
+      </Button>
     </div>
   );
 };

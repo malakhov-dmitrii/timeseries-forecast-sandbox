@@ -83,18 +83,6 @@ const adjustParams = (
         // Period size
         const pSize = data.length / p;
 
-        console.log({
-          data,
-          p,
-          obs,
-          pSize,
-          bestError,
-          bestAlpha,
-          bestBeta,
-          bestGamma,
-          bestPeriodSize,
-          bestObs,
-        });
         if (pSize >= 2) {
           // Adjust Alpha
           for (let a = 0; a < 1; a = safeSum(a, adjustmentStep)) {
